@@ -82,4 +82,3 @@
     - { name: 'vm.swappiness', value: '10' }
     - { name: 'fs.file-max', value: '2097152' }
   tags: sysctl
-

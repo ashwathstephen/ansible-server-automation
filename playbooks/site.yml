@@ -40,4 +40,3 @@
       vars:
         k8s_role: worker
     - monitoring
-
