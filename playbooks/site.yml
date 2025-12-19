@@ -1,0 +1,43 @@
+---
+# Main playbook for full server provisioning
+
+- name: Apply common configuration to all hosts
+  hosts: all
+  become: true
+  roles:
+    - common
+    - security
+
+- name: Configure web servers
+  hosts: webservers
+  become: true
+  roles:
+    - docker
+    - monitoring
+
+- name: Configure database servers
+  hosts: databases
+  become: true
+  roles:
+    - monitoring
+
+- name: Configure Kubernetes masters
+  hosts: k8s_masters
+  become: true
+  roles:
+    - docker
+    - role: kubernetes
+      vars:
+        k8s_role: master
+    - monitoring
+
+- name: Configure Kubernetes workers
+  hosts: k8s_workers
+  become: true
+  roles:
+    - docker
+    - role: kubernetes
+      vars:
+        k8s_role: worker
+    - monitoring
+

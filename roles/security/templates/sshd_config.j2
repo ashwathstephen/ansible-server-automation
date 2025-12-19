@@ -1,0 +1,40 @@
+# SSH Server Configuration - Managed by Ansible
+# Do not edit manually
+
+Port {{ ssh_port }}
+AddressFamily any
+ListenAddress 0.0.0.0
+
+# Authentication
+PermitRootLogin {{ ssh_permit_root_login }}
+PasswordAuthentication {{ ssh_password_authentication }}
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+MaxAuthTries {{ ssh_max_auth_tries }}
+MaxSessions 10
+
+# Security
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+UsePAM yes
+X11Forwarding no
+PrintMotd no
+PrintLastLog yes
+TCPKeepAlive yes
+ClientAliveInterval 300
+ClientAliveCountMax 2
+LoginGraceTime 60
+StrictModes yes
+IgnoreRhosts yes
+HostbasedAuthentication no
+
+# Logging
+SyslogFacility AUTH
+LogLevel VERBOSE
+
+# Subsystems
+Subsystem sftp /usr/lib/openssh/sftp-server
+
+# Allowed users (uncomment and customize)
+# AllowUsers devops admin
+

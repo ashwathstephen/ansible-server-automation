@@ -1,0 +1,105 @@
+---
+# Security role - Server hardening
+
+- name: Configure SSH daemon
+  template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0600'
+    validate: 'sshd -t -f %s'
+  notify: restart sshd
+  tags: ssh
+
+- name: Install UFW firewall
+  apt:
+    name: ufw
+    state: present
+  when: ansible_os_family == "Debian"
+  tags: firewall
+
+- name: Set UFW default policies
+  ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: 'incoming', policy: 'deny' }
+    - { direction: 'outgoing', policy: 'allow' }
+  tags: firewall
+
+- name: Allow SSH through firewall
+  ufw:
+    rule: allow
+    port: "{{ ssh_port }}"
+    proto: tcp
+  tags: firewall
+
+- name: Allow configured TCP ports
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ firewall_allowed_tcp_ports }}"
+  tags: firewall
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+  tags: firewall
+
+- name: Install fail2ban
+  apt:
+    name: fail2ban
+    state: present
+  when: ansible_os_family == "Debian"
+  tags: fail2ban
+
+- name: Configure fail2ban jail
+  template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart fail2ban
+  tags: fail2ban
+
+- name: Enable fail2ban service
+  service:
+    name: fail2ban
+    state: started
+    enabled: yes
+  tags: fail2ban
+
+- name: Disable root login via password
+  lineinfile:
+    path: /etc/passwd
+    regexp: '^root:'
+    line: 'root:x:0:0:root:/root:/usr/sbin/nologin'
+  when: ssh_permit_root_login == "no"
+  tags: security
+
+- name: Set permissions on sensitive files
+  file:
+    path: "{{ item.path }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: '/etc/passwd', mode: '0644' }
+    - { path: '/etc/shadow', mode: '0640' }
+    - { path: '/etc/group', mode: '0644' }
+    - { path: '/etc/gshadow', mode: '0640' }
+  tags: security
+
+- name: Remove unnecessary packages
+  apt:
+    name:
+      - telnet
+      - rsh-client
+      - rsh-redone-client
+    state: absent
+  when: ansible_os_family == "Debian"
+  tags: security
+

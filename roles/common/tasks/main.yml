@@ -1,0 +1,85 @@
+---
+# Common role - Base server configuration
+
+- name: Set timezone
+  timezone:
+    name: "{{ timezone }}"
+  tags: common
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == "Debian"
+  tags: common
+
+- name: Install common packages
+  package:
+    name: "{{ common_packages }}"
+    state: present
+  tags: common
+
+- name: Configure NTP
+  template:
+    src: ntp.conf.j2
+    dest: /etc/ntp.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart ntp
+  when: ansible_os_family == "Debian"
+  tags: common
+
+- name: Create admin users
+  user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    state: present
+    create_home: yes
+  loop: "{{ admin_users }}"
+  tags: users
+
+- name: Set authorized keys for admin users
+  authorized_key:
+    user: "{{ item.0.name }}"
+    key: "{{ item.1 }}"
+    state: present
+  loop: "{{ admin_users | subelements('ssh_keys', skip_missing=True) }}"
+  tags: users
+
+- name: Configure sudoers for admin users
+  lineinfile:
+    path: /etc/sudoers.d/{{ item.name }}
+    line: "{{ item.name }} ALL=(ALL) NOPASSWD: ALL"
+    create: yes
+    mode: '0440'
+    validate: 'visudo -cf %s'
+  loop: "{{ admin_users }}"
+  tags: users
+
+- name: Set hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+  tags: common
+
+- name: Update /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ inventory_hostname }}"
+  tags: common
+
+- name: Configure sysctl parameters
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { name: 'net.core.somaxconn', value: '65535' }
+    - { name: 'net.ipv4.tcp_max_syn_backlog', value: '65535' }
+    - { name: 'vm.swappiness', value: '10' }
+    - { name: 'fs.file-max', value: '2097152' }
+  tags: sysctl
+

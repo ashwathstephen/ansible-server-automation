@@ -1,0 +1,30 @@
+# Fail2Ban Configuration - Managed by Ansible
+
+[DEFAULT]
+bantime = 3600
+findtime = 600
+maxretry = 5
+backend = auto
+usedns = warn
+destemail = root@localhost
+sender = fail2ban@localhost
+mta = sendmail
+protocol = tcp
+chain = INPUT
+
+[sshd]
+enabled = true
+port = {{ ssh_port }}
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 86400
+
+[sshd-ddos]
+enabled = true
+port = {{ ssh_port }}
+filter = sshd-ddos
+logpath = /var/log/auth.log
+maxretry = 6
+bantime = 172800
+
